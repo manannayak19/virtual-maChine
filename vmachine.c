@@ -237,10 +237,19 @@ int main(int argc, const char *argv[])
         break;
         case OP_TRAP:
             reg[R_R7] = reg[R_PC];
-            
+
             switch (instr & 0xFF)
             {
             case TRAP_GETC:
+                /* read a single ASCII char */
+                reg[R_R0] = (uint16_t)getchar();
+                update_flags(R_R0);
+                break;
+            case TRAP_OUT:
+                putc((char)reg[R_R0], stdout);
+                fflush(stdout);
+                break;
+            case TRAP_PUTS:
             {
                 /* one char per word */
                 uint16_t *c = memory + reg[R_R0];
@@ -252,16 +261,39 @@ int main(int argc, const char *argv[])
                 fflush(stdout);
             }
             break;
-            case TRAP_OUT:
-                @{ TRAP OUT } break;
-            case TRAP_PUTS:
-                @{ TRAP PUTS } break;
             case TRAP_IN:
-                @{ TRAP IN } break;
+            {
+                printf("Enter a character: ");
+                char c = getchar();
+                putc(c, stdout);
+                fflush(stdout);
+                reg[R_R0] = (uint16_t)c;
+                update_flags(R_R0);
+            }
+            break;
             case TRAP_PUTSP:
-                @{ TRAP PUTSP } break;
+            {
+                /* one char per byte (two bytes per word)
+                   here we need to swap back to
+                   big endian format */
+                uint16_t *c = memory + reg[R_R0];
+                while (*c)
+                {
+                    char char1 = (*c) & 0xFF;
+                    putc(char1, stdout);
+                    char char2 = (*c) >> 8;
+                    if (char2)
+                        putc(char2, stdout);
+                    ++c;
+                }
+                fflush(stdout);
+            }
+            break;
             case TRAP_HALT:
-                @{ TRAP HALT } break;
+                puts("HALT");
+                fflush(stdout);
+                running = 0;
+                break;
             }
             break;
         case OP_RES:
@@ -282,4 +314,25 @@ uint16_t sign_extend(uint16_t x, int bit_count)
         x |= (0xFFFF << bit_count);
     }
     return x;
+}
+
+// read image file
+void read_image_file(FILE *file)
+{
+    // the origin tells us where in memory to place the image
+    uint16_t origin;
+    fread(&origin, sizeof(origin), 1, file);
+    origin = swap16(origin);
+
+    // we know the maximum file size so we only need on fread
+    uint16_t max_read = MEMORY_MAX - origin;
+    uint16_t *p = memory + origin;
+    size_t read = fread(p, sizeof(uint16_t), max_read, file);
+
+    // swap to little endian
+    while (read-- > 0)
+    {
+        *p = swap16(*p);
+        ++p;
+    }
 }
