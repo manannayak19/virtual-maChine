@@ -7,8 +7,4 @@ virtual machine, following this blog: https://www.jmeiners.com/lc3-vm
 <li>Full Instruction Set: Implements all standard LC-3 opcodes (like ADD, LDR, NOT, JMP).</li>
 
 <li>Trap Routines: Simulates system calls for I/O, allowing programs to read from the keyboard (GETC) and write to the console (PUTS).</li>
-
-<li>Program Loader: Reads compiled .obj files into the VM's memory.</li>
-
-<li>Endian Handling: Automatically converts big-endian LC-3 programs to run correctly on modern little-endian machines.</li>
 </ul>
